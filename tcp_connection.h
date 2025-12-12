@@ -2,30 +2,31 @@
 #define MESSENGER_CLIENT_TCP_CONNECTION_H
 
 #include <boost/asio.hpp>
-#include <memory>
+#include <deque>
 
 using boost::asio::ip::tcp;
+
+class tcp_client;
 
 class tcp_connection
     : public std::enable_shared_from_this<tcp_connection>
 {
 public:
-    typedef std::shared_ptr<tcp_connection> pointer;
-
-    explicit tcp_connection(boost::asio::io_context& io_context);
-    static pointer create(boost::asio::io_context& io_context);
+    explicit tcp_connection(tcp::socket socket, std::shared_ptr<tcp_client> observer);
     void start();
+    void close();
 
-    tcp::socket& socket() {
-        return socket_;
-    }
+    void deliver(const std::string& msg);
 private:
     tcp::socket socket_;
+    std::shared_ptr<tcp_client> observer_;
+    boost::asio::streambuf buffer_;
+    std::deque<std::string> message_;
 
-    std::string message_;
-
-    void handle_write();
-    void handle_read();
+    void do_read();
+    void handle_read(const boost::system::error_code& error, size_t bytes_transferred);
+    void do_write();
+    void handle_write(const boost::system::error_code& error);
 };
 
 
